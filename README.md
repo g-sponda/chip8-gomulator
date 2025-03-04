@@ -112,7 +112,7 @@ Z X C V      ->  A 0 B F
 
 ## License
 
-This project is licensed under the MIT License. See `LICENSE` for details.
+This project is licensed under the GNU GPLv3 License. See `LICENSE` for details.
 
 ## Acknowledgments
 
