@@ -105,12 +105,36 @@ func (c *Chip8) SetIndexToAddr(opcode uint16) {
 // Draw sprite at (VX, VY)
 // receives opcode
 func (c *Chip8) DrawSprite(opcode uint16) {
+	// draw 8xN pixel sprite at position vX, vY with data starting at the address in I
 	x_pos := c.v[(opcode&0x0F00)>>8] % 64 // get X coordination from VX register
-	y_pos := c.v[(opcode&0x00F0)>>4] & 32 // get Y coordination from VY register
+	y_pos := c.v[(opcode&0x00F0)>>4] % 32 // get Y coordination from VY register
 	height_n := (opcode & 0x000F)         // get height, the width is always 8 pixels wide
+	c.v[0xF] = 0
 
 	// TODO: implement loop to set DrawSprite and set pixels ON or OFF
 	// Also need to set VF register if a pisxel is erased (collision detection)
+	// we need to draw 8xN pixel into the sprite where n is the height.
+	//
+	// let's loop to our screen, starting from poisition
+	for row := uint16(0); row < height_n; row++ {
+		sprite_byte := c.memory[c.i+row] // gets one row of the sprite, that needs to be draw. this is a 8-bit value.
+		for col := 0; col < 8; col++ {
+			// 0x80 is 8 bits, where only the left most is 1. >> col we shift this bit col positions
+			// since we only want to draw or "activate" the pixel, we can do an bitwise AND operation,
+			// to compare if the bit of the sprite_byte and the current collumn bit result in 1, which means we should
+			// turn the pixel on, or validate collision
+			if (sprite_byte & (0x80 >> col)) != 0 {
+				if c.screen[row+uint16(y_pos)][col+int(x_pos)] == 1 { // A collision happened
+					c.v[0xF] = 1 // VF is the data register used to check collision, we set to 1, since a collision happened
+				}
+				c.screen[row+uint16(y_pos)][col+int(x_pos)] ^= 1 // bitwise XOR operation, only results in true when values differ
+				// 0 XOR 0 = 0
+				// 1 XOR 0 = 1
+				// 0 XOR 1 = 1
+				// 1 XOR 1 = 0
+			}
+		}
+	}
 }
 
 func (c *Chip8) ExecuteOpcode() {
