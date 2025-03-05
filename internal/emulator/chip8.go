@@ -7,6 +7,11 @@ import (
 	"github.com/g-sponda/chip8-gomulator/internal/utils"
 )
 
+const (
+	col_size = 64
+	row_size = 32
+)
+
 // Struct to hold Chip8 emulator state
 type Chip8 struct {
 	// 0x000 to 0x1FF will be reserved for the interpreter(program code, and fonts)
@@ -21,8 +26,8 @@ type Chip8 struct {
 	delay_timer byte       // counts down to 0
 	sound_timer byte       // counts down to 0
 	// IOs
-	keys   [16]byte     // 16 keys (0-9, A-F), used for keypad state (0 = not pressed; 1 = pressed)
-	screen [32][64]byte // Screen 64x32 grid
+	keys   [16]byte                 // 16 keys (0-9, A-F), used for keypad state (0 = not pressed; 1 = pressed)
+	screen [row_size][col_size]byte // Screen 64x32 grid
 }
 
 func (c *Chip8) LoadRom(filename string) error {
@@ -106,15 +111,18 @@ func (c *Chip8) SetIndexToAddr(opcode uint16) {
 // receives opcode
 func (c *Chip8) DrawSprite(opcode uint16) {
 	// draw 8xN pixel sprite at position vX, vY with data starting at the address in I
-	x_pos := c.v[(opcode&0x0F00)>>8] % 64 // get X coordination from VX register
-	y_pos := c.v[(opcode&0x00F0)>>4] % 32 // get Y coordination from VY register
-	height_n := (opcode & 0x000F)         // get height, the width is always 8 pixels wide
+	// To get the X and Y coordinations and make sure it's inside the limit,
+	// we can get the value mod the collumn/row size, so we ensure it's in the limit
+	// if the value is smaller than the divisor, the remainder is the value itself.
+	// This way of implement guarantee that we don't draw outside of the screen, but this will wrap around
+	x_pos := c.v[(opcode&0x0F00)>>8] % col_size // get X coordination from VX register
+	y_pos := c.v[(opcode&0x00F0)>>4] % row_size // get Y coordination from VY register
+	height_n := (opcode & 0x000F)               // get height, the width is always 8 pixels wide
 	c.v[0xF] = 0
 
-	// TODO: implement loop to set DrawSprite and set pixels ON or OFF
+	// implement loop to set DrawSprite and set pixels ON or OFF
 	// Also need to set VF register if a pisxel is erased (collision detection)
 	// we need to draw 8xN pixel into the sprite where n is the height.
-	//
 	// let's loop to our screen, starting from poisition
 	for row := uint16(0); row < height_n; row++ {
 		sprite_byte := c.memory[c.i+row] // gets one row of the sprite, that needs to be draw. this is a 8-bit value.
